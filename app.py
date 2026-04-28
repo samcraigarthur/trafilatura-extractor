@@ -20,6 +20,9 @@ AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
 
 app = FastAPI(docs_url=None, redoc_url=None)  # disable public API docs
 
+# scan_id -> asyncio.Event; set the event to cancel that scan
+_active_scans: dict[str, asyncio.Event] = {}
+
 
 # ── Auth ────────────────────────────────────────────────────────────────────
 
@@ -151,7 +154,10 @@ def extract(url: str = Query(...), _: None = Depends(verify_token)):
 
 
 @app.get("/scan")
-async def scan(url: str = Query(...), _: None = Depends(verify_token)):
+async def scan(url: str = Query(...), scan_id: str = Query(...), _: None = Depends(verify_token)):
+    cancel_event = asyncio.Event()
+    _active_scans[scan_id] = cancel_event
+
     async def event_stream():
         try:
             domain = normalise_domain(url)
@@ -159,7 +165,7 @@ async def scan(url: str = Query(...), _: None = Depends(verify_token)):
             try:
                 assert_safe_url(domain)
             except ValueError as e:
-                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}"
+                yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
                 return
 
             try:
@@ -174,6 +180,10 @@ async def scan(url: str = Query(...), _: None = Depends(verify_token)):
             failed_urls = []
 
             for index, page_url in enumerate(urls, start=1):
+                if cancel_event.is_set():
+                    yield f"data: {json.dumps({'type': 'cancelled', 'extracted': len(all_content), 'failed': len(failed_urls)})}\n\n"
+                    return
+
                 yield f"data: {json.dumps({'type': 'progress', 'index': index, 'total': len(urls), 'url': page_url})}\n\n"
 
                 try:
@@ -200,9 +210,20 @@ async def scan(url: str = Query(...), _: None = Depends(verify_token)):
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+        finally:
+            _active_scans.pop(scan_id, None)
 
     return StreamingResponse(
         event_stream(),
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+@app.post("/cancel/{scan_id}")
+async def cancel(scan_id: str, _: None = Depends(verify_token)):
+    event = _active_scans.get(scan_id)
+    if event:
+        event.set()
+        return {"cancelled": True}
+    return {"cancelled": False}
