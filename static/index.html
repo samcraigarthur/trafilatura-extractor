@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Site Content Extractor</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f0f2f5;
+      color: #1a1a2e;
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 20px 80px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 780px;
+    }
+
+    .header { margin-bottom: 28px; }
+
+    .header h1 {
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      color: #111827;
+    }
+
+    .header p {
+      margin-top: 6px;
+      font-size: 0.88rem;
+      color: #6b7280;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px 26px;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 4px 20px rgba(0,0,0,0.05);
+      margin-bottom: 16px;
+    }
+
+    /* ── Input row ── */
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    input[type="text"] {
+      flex: 1;
+      padding: 11px 15px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 9px;
+      font-size: 0.93rem;
+      color: #111827;
+      outline: none;
+      transition: border-color 0.18s;
+      background: #fafafa;
+    }
+
+    input[type="text"]:focus {
+      border-color: #6366f1;
+      background: #fff;
+    }
+
+    .btn {
+      padding: 11px 22px;
+      border: none;
+      border-radius: 9px;
+      font-size: 0.93rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s, opacity 0.18s, color 0.18s;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) { background: #4f46e5; }
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-outline {
+      background: #fff;
+      color: #6366f1;
+      border: 1.5px solid #6366f1;
+    }
+
+    .btn-outline:hover { background: #eef2ff; }
+
+    .btn-success { background: #16a34a; color: #fff; }
+
+    /* ── Error ── */
+    .error-box {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 15px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      color: #dc2626;
+    }
+
+    .error-box.visible { display: block; }
+
+    /* ── Progress ── */
+    .progress-section { display: none; }
+    .progress-section.visible { display: block; }
+
+    .progress-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 10px;
+    }
+
+    .progress-label {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #374151;
+    }
+
+    .progress-count {
+      font-size: 0.82rem;
+      color: #9ca3af;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bar-track {
+      height: 7px;
+      background: #e5e7eb;
+      border-radius: 99px;
+      overflow: hidden;
+      margin-bottom: 10px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #818cf8);
+      border-radius: 99px;
+      width: 0%;
+      transition: width 0.5s ease;
+    }
+
+    .progress-url {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* ── Results ── */
+    .results-section { display: none; }
+    .results-section.visible { display: block; }
+
+    .results-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .badge {
+      padding: 4px 11px;
+      border-radius: 99px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    .badge-green { background: #dcfce7; color: #15803d; }
+    .badge-red   { background: #fee2e2; color: #b91c1c; }
+    .badge-blue  { background: #dbeafe; color: #1d4ed8; }
+
+    .results-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 5px;
+    }
+
+    .results-hint {
+      font-size: 0.77rem;
+      color: #9ca3af;
+      margin-bottom: 10px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 340px;
+      padding: 14px;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 9px;
+      font-family: 'Courier New', 'Consolas', monospace;
+      font-size: 0.77rem;
+      line-height: 1.55;
+      color: #374151;
+      resize: vertical;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.18s;
+      background: #fafafa;
+    }
+
+    textarea:hover { border-color: #a5b4fc; }
+    textarea.copied { border-color: #22c55e !important; }
+
+    .results-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <h1>Site Content Extractor</h1>
+      <p>Crawl a website sitemap and extract page content for AI chatbot training.</p>
+    </div>
+
+    <!-- Input card -->
+    <div class="card">
+      <div class="input-row">
+        <input type="text" id="urlInput" placeholder="https://example.com" autocomplete="off" />
+        <button class="btn btn-primary" id="scanBtn" onclick="startScan()">Scan Site</button>
+      </div>
+      <div class="error-box" id="errorBox"></div>
+    </div>
+
+    <!-- Progress card -->
+    <div class="card progress-section" id="progressSection">
+      <div class="progress-top">
+        <span class="progress-label" id="progressLabel">Fetching sitemap…</span>
+        <span class="progress-count" id="progressCount"></span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill" id="barFill"></div>
+      </div>
+      <div class="progress-url" id="progressUrl">&nbsp;</div>
+    </div>
+
+    <!-- Results card -->
+    <div class="card results-section" id="resultsSection">
+      <div class="results-badges" id="resultsBadges"></div>
+      <div class="results-label">Extracted Content</div>
+      <div class="results-hint">Click the box to copy all content to clipboard</div>
+      <textarea id="resultsArea" readonly onclick="copyResults()" title="Click to copy all"></textarea>
+      <div class="results-actions">
+        <button class="btn btn-primary" id="copyBtn" onclick="copyResults()">Copy to Clipboard</button>
+        <button class="btn btn-outline" onclick="newScan()">New Scan</button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    let es = null;
+
+    function startScan() {
+      const url = document.getElementById('urlInput').value.trim();
+      if (!url) { showError('Please enter a website URL.'); return; }
+
+      hideError();
+      hide('resultsSection');
+      show('progressSection');
+      setScanBtn(true);
+      resetProgress();
+
+      if (es) { es.close(); es = null; }
+
+      es = new EventSource('/scan?url=' + encodeURIComponent(url));
+
+      es.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+
+        if (d.type === 'found') {
+          document.getElementById('progressLabel').textContent = 'Scanning pages…';
+          document.getElementById('progressCount').textContent = '0 / ' + d.total;
+        }
+
+        else if (d.type === 'progress') {
+          const pct = Math.round((d.index / d.total) * 100);
+          document.getElementById('barFill').style.width = pct + '%';
+          document.getElementById('progressCount').textContent = d.index + ' / ' + d.total;
+          document.getElementById('progressUrl').textContent = d.url;
+        }
+
+        else if (d.type === 'done') {
+          close_es();
+          hide('progressSection');
+          showResults(d);
+          setScanBtn(false);
+        }
+
+        else if (d.type === 'error') {
+          close_es();
+          hide('progressSection');
+          setScanBtn(false);
+          showError(d.message);
+        }
+      };
+
+      es.onerror = () => {
+        close_es();
+        hide('progressSection');
+        setScanBtn(false);
+        showError('Connection lost. The server may have stopped.');
+      };
+    }
+
+    function close_es() {
+      if (es) { es.close(); es = null; }
+    }
+
+    function showResults(d) {
+      const badges = document.getElementById('resultsBadges');
+      badges.innerHTML =
+        `<span class="badge badge-green">${d.extracted} page${d.extracted !== 1 ? 's' : ''} extracted</span>` +
+        (d.failed > 0 ? `<span class="badge badge-red">${d.failed} failed</span>` : '') +
+        `<span class="badge badge-blue">Saved: ${d.filename}</span>`;
+
+      document.getElementById('resultsArea').value = d.content;
+      show('resultsSection');
+    }
+
+    function copyResults() {
+      const ta = document.getElementById('resultsArea');
+      const btn = document.getElementById('copyBtn');
+
+      navigator.clipboard.writeText(ta.value).then(() => {
+        ta.classList.add('copied');
+        btn.textContent = 'Copied!';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-primary');
+
+        setTimeout(() => {
+          ta.classList.remove('copied');
+          btn.textContent = 'Copy to Clipboard';
+          btn.classList.remove('btn-success');
+          btn.classList.add('btn-primary');
+        }, 2200);
+      });
+    }
+
+    function newScan() {
+      hide('resultsSection');
+      hide('progressSection');
+      hideError();
+      document.getElementById('urlInput').value = '';
+      document.getElementById('urlInput').focus();
+    }
+
+    function resetProgress() {
+      document.getElementById('progressLabel').textContent = 'Fetching sitemap…';
+      document.getElementById('progressCount').textContent = '';
+      document.getElementById('progressUrl').textContent = '\u00a0';
+      document.getElementById('barFill').style.width = '0%';
+    }
+
+    function show(id) { document.getElementById(id).classList.add('visible'); }
+    function hide(id) { document.getElementById(id).classList.remove('visible'); }
+
+    function showError(msg) {
+      const b = document.getElementById('errorBox');
+      b.textContent = msg;
+      b.classList.add('visible');
+    }
+
+    function hideError() {
+      document.getElementById('errorBox').classList.remove('visible');
+    }
+
+    function setScanBtn(scanning) {
+      const b = document.getElementById('scanBtn');
+      b.disabled = scanning;
+      b.textContent = scanning ? 'Scanning…' : 'Scan Site';
+    }
+
+    document.getElementById('urlInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') startScan();
+    });
+  </script>
+</body>
+</html>
