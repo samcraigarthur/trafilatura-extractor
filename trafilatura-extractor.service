@@ -3,7 +3,7 @@ Description=Trafilatura Extractor FastAPI Application
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=_SERVICE_USER_
 WorkingDirectory=/home/_SERVICE_USER_/trafilatura-extractor
 ExecStart=/home/_SERVICE_USER_/trafilatura-extractor/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8000
@@ -11,7 +11,7 @@ Restart=on-failure
 RestartSec=10
 StandardOutput=append:/var/log/trafilatura-extractor/app.log
 StandardError=append:/var/log/trafilatura-extractor/error.log
-EnvironmentFile=/home/_SERVICE_USER_/trafilatura-extractor/.env
+EnvironmentFile=-/home/_SERVICE_USER_/trafilatura-extractor/.env
 
 [Install]
 WantedBy=multi-user.target

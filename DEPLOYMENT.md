@@ -50,10 +50,11 @@ AUTH_TOKEN=your_secret_token_here
 **Option A: Using the provided service file**
 
 ```bash
-# Copy service file to systemd directory
+# Copy service file to systemd directory (MUST use sudo)
 sudo cp trafilatura-extractor.service /etc/systemd/system/
 
 # Replace placeholder with your username (e.g., if your user is 'ubuntu', replace _SERVICE_USER_ with ubuntu)
+# Note: Replace 'ubuntu' with your actual GCP instance username if different
 sudo sed -i 's/_SERVICE_USER_/ubuntu/g' /etc/systemd/system/trafilatura-extractor.service
 
 # Create log directory
@@ -84,7 +85,7 @@ Description=Trafilatura Extractor FastAPI Application
 After=network.target
 
 [Service]
-Type=notify
+Type=simple
 User=\$USER
 WorkingDirectory=\$HOME/trafilatura-extractor
 ExecStart=\$HOME/trafilatura-extractor/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8000
@@ -92,7 +93,7 @@ Restart=on-failure
 RestartSec=10
 StandardOutput=append:/var/log/trafilatura-extractor/app.log
 StandardError=append:/var/log/trafilatura-extractor/error.log
-EnvironmentFile=\$HOME/trafilatura-extractor/.env
+EnvironmentFile=-\$HOME/trafilatura-extractor/.env
 
 [Install]
 WantedBy=multi-user.target
