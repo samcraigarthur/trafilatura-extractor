@@ -8,100 +8,49 @@ This guide explains how to set up your Trafilatura Extractor app to run persiste
 - SSH access to your instance
 - `git` installed on the instance
 
-## Setup Steps
+## Quick Start (One-Time Setup)
 
-### 1. Clone the Repository
+Run these commands on your GCP instance **once**:
 
 ```bash
 cd ~
 git clone https://github.com/samcraigarthur/trafilatura-extractor.git
 cd trafilatura-extractor
-```
 
-### 2. Set Up Python Environment
-
-```bash
-# Install Python and pip if not already present
+# Set up Python environment
 sudo apt update
 sudo apt install python3 python3-pip python3-venv -y
-
-# Create virtual environment
 python3 -m venv venv
-
-# Activate and install dependencies
 source venv/bin/activate
 pip install -r requirements.txt
-```
 
-### 3. Configure Environment Variables
-
-```bash
-# Create your .env file with any required settings
-nano .env
-```
-
-Add your configuration (e.g., `AUTH_TOKEN` if you want one):
-```
-AUTH_TOKEN=your_secret_token_here
-```
-
-### 4. Set Up Systemd Service
-
-**Option A: Using the provided service file**
-
-```bash
-# Copy service file to systemd directory (MUST use sudo)
+# Set up systemd service (replace YOUR_USERNAME with your actual username)
 sudo cp trafilatura-extractor.service /etc/systemd/system/
-
-# Replace placeholder with your username (e.g., if your user is 'ubuntu', replace _SERVICE_USER_ with ubuntu)
-# Note: Replace 'ubuntu' with your actual GCP instance username if different
-sudo sed -i 's/_SERVICE_USER_/ubuntu/g' /etc/systemd/system/trafilatura-extractor.service
+sudo sed -i 's/_SERVICE_USER_/YOUR_USERNAME/g' /etc/systemd/system/trafilatura-extractor.service
 
 # Create log directory
 sudo mkdir -p /var/log/trafilatura-extractor
-sudo chown ubuntu:ubuntu /var/log/trafilatura-extractor
+sudo chown YOUR_USERNAME:YOUR_USERNAME /var/log/trafilatura-extractor
 
-# Reload systemd daemon
+# Enable and start service
 sudo systemctl daemon-reload
-
-# Enable service to start on boot
 sudo systemctl enable trafilatura-extractor
-
-# Start the service
 sudo systemctl start trafilatura-extractor
 
-# Check status
+# Verify it's running
 sudo systemctl status trafilatura-extractor
 ```
 
-**Option B: Manual systemd setup**
+## Updating After Code Changes
 
-If you prefer to create the service file manually:
+When you push updates to this repo, run on your GCP instance:
 
 ```bash
-sudo tee /etc/systemd/system/trafilatura-extractor.service > /dev/null <<EOF
-[Unit]
-Description=Trafilatura Extractor FastAPI Application
-After=network.target
-
-[Service]
-Type=simple
-User=\$USER
-WorkingDirectory=\$HOME/trafilatura-extractor
-ExecStart=\$HOME/trafilatura-extractor/venv/bin/python -m uvicorn app:app --host 0.0.0.0 --port 8000
-Restart=on-failure
-RestartSec=10
-StandardOutput=append:/var/log/trafilatura-extractor/app.log
-StandardError=append:/var/log/trafilatura-extractor/error.log
-EnvironmentFile=-\$HOME/trafilatura-extractor/.env
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-sudo systemctl daemon-reload
-sudo systemctl enable trafilatura-extractor
-sudo systemctl start trafilatura-extractor
+cd ~/trafilatura-extractor
+git pull origin main
+source venv/bin/activate
+pip install -r requirements.txt  # If dependencies changed
+sudo systemctl restart trafilatura-extractor
 ```
 
 ### 5. Configure Firewall (If Needed)
